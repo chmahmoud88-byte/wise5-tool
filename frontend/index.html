@@ -3,7 +3,46 @@
 <html>
 <head>
 <title>WISE5 PRO</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f5f5f5;
+  padding: 20px;
+}
+
+h1 {
+  color: #2c3e50;
+}
+
+button {
+  padding: 10px;
+  margin: 5px;
+  border: none;
+  background: #3498db;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2980b9;
+}
+
+.box {
+  background: white;
+  padding: 15px;
+  margin-top: 20px;
+  border-radius: 10px;
+}
+
+.green { color: green; }
+.orange { color: orange; }
+.red { color: red; }
+
+</style>
+
 </head>
+
 <body>
 
 <h1>WISE5 PRO</h1>
@@ -14,44 +53,82 @@
 <input type="file" id="f">
 <button onclick="upload()">Upload PDF</button>
 
-<pre id="out"></pre>
+<div class="box">
+<h3>Results:</h3>
+<div id="out"></div>
+</div>
+
+<canvas id="chart" width="400" height="200"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 
 const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.replit.dev";
 
+function color(score){
+  if(score > 0.75) return "green";
+  if(score > 0.5) return "orange";
+  return "red";
+}
+
+function show(data){
+  let s = data.score;
+  document.getElementById('out').innerHTML =
+    "<b class='"+color(s)+"'>Score: "+s+"</b><br>" +
+    JSON.stringify(data.attributes,null,2);
+
+  drawChart(data.attributes);
+}
+
 async function wise(){
-  let r = await fetch(API + '/score',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
+  let r = await fetch(API + "/score", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
     body: JSON.stringify({runtime_min:15})
   });
-  document.getElementById('out').innerText = await r.text();
+  show(await r.json());
 }
 
 async function bagi(){
-  let r = await fetch(API + '/bagi',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
+  let r = await fetch(API + "/bagi", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
     body: JSON.stringify({})
   });
-  document.getElementById('out').innerText = await r.text();
+  show(await r.json());
 }
 
 async function upload(){
-  let f = document.getElementById('f').files[0];
+  let file = document.getElementById("f").files[0];
   let form = new FormData();
-  form.append('file', f);
+  form.append("file", file);
 
-  let r = await fetch(API + '/extract-and-score',{
-    method:'POST',
+  let r = await fetch(API + "/extract-and-score", {
+    method: "POST",
     body: form
   });
 
-  document.getElementById('out').innerText = await r.text();
+  show(await r.json());
+}
+
+function drawChart(attr){
+  new Chart(document.getElementById("chart"), {
+    type: 'radar',
+    data: {
+      labels: Object.keys(attr),
+      datasets: [{
+        label: 'Metrics',
+        data: Object.values(attr),
+        backgroundColor: 'rgba(52,152,219,0.2)',
+        borderColor: '#3498db'
+      }]
+    }
+  });
 }
 
 </script>
 
 </body>
 </html>
+``
