@@ -13,9 +13,7 @@ body {
   padding: 20px;
 }
 
-h1 {
-  color: #2c3e50;
-}
+h1 { color: #2c3e50; }
 
 button {
   padding: 10px;
@@ -27,9 +25,7 @@ button {
   border-radius: 5px;
 }
 
-button:hover {
-  background: #2980b9;
-}
+button:hover { background: #2980b9; }
 
 .box {
   background: white;
@@ -42,7 +38,6 @@ button:hover {
 .orange { color: orange; }
 .red { color: red; }
 </style>
-
 </head>
 
 <body>
@@ -53,6 +48,10 @@ button:hover {
 <button onclick="synth()">SYNTH-GUARD</button>
 <button onclick="compare()">COMPARE</button>
 <button onclick="window.print()">Export PDF</button>
+
+<br><br>
+<label>Solvent:</label>
+<input type="text" id="solvent" placeholder="e.g. methanol">
 
 <input type="file" id="f">
 <button onclick="upload()">Upload PDF</button>
@@ -70,29 +69,62 @@ const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.
 
 let chart = null;
 
-// 🎨 color logic
+// ✅ CHEM21 DATABASE
+const solventsDB = {
+  "water": "green",
+  "ethanol": "green",
+  "isopropanol": "green",
+
+  "methanol": "warning",
+  "acetonitrile": "warning",
+
+  "hexane": "hazard",
+  "toluene": "hazard",
+  "chloroform": "hazard"
+};
+
+// ✅ solvent scoring
+function solventImpact(name){
+  let s = solventsDB[name?.toLowerCase()];
+  if(s === "green") return 1;
+  if(s === "warning") return 0.6;
+  if(s === "hazard") return 0.2;
+  return 0.7;
+}
+
+// 🎨 اللون
 function color(score){
   if(score > 0.75) return "green";
   if(score > 0.5) return "orange";
   return "red";
 }
 
-// 🧠 scientific summary
+// 🧠 summary
 function summary(score){
   if(score > 0.75) return "Excellent green analytical method.";
   if(score > 0.5) return "Moderately sustainable method.";
   return "Low sustainability method.";
 }
 
-// 📊 display result
+// ✅ عرض
 function show(data){
 
-  let score = data.score ?? null;
+  let baseScore = data.score ?? 0.6;
   let attrs = data.attributes || data;
 
+  let solvent = document.getElementById("solvent").value;
+  let solventScore = solventImpact(solvent);
+
+  // ✅ تعديل السكور بناءً على solvent
+  let finalScore = (baseScore + solventScore) / 2;
+
   document.getElementById('out').innerHTML =
-    "<b class='"+color(score || 0)+"'>Score: "+(score ?? "N/A")+"</b><br>" +
-    "<i>"+ summary(score || 0) +"</i><br><br>" +
+    "<b class='"+color(finalScore)+"'>Final Score: "+finalScore.toFixed(2)+"</b><br>" +
+    "<i>"+ summary(finalScore) +"</i><br><br>" +
+
+    "<b>Solvent:</b> " + solvent + "<br>" +
+    "<b>Class:</b> " + (solventsDB[solvent?.toLowerCase()] || "unknown") + "<br><br>" +
+
     "<pre>"+JSON.stringify(attrs, null, 2)+"</pre>";
 
   drawChart(attrs);
@@ -108,27 +140,13 @@ async function wise(){
   show(await r.json());
 }
 
-// ✅ SYNTH-GUARD (بديل BAGI)
+// ✅ SYNTH-GUARD
 async function synth(){
   let r = await fetch(API + "/bagi", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({})
   });
-  show(await r.json());
-}
-
-// ✅ upload
-async function upload(){
-  let file = document.getElementById("f").files[0];
-  let form = new FormData();
-  form.append("file", file);
-
-  let r = await fetch(API + "/extract-and-score", {
-    method: "POST",
-    body: form
-  });
-
   show(await r.json());
 }
 
@@ -153,11 +171,24 @@ async function compare(){
   document.getElementById('out').innerHTML =
     "<h3>Comparison</h3>" +
     "<b>WISE Score:</b> " + wise.score + "<br>" +
-    "<b>SYNTH-GUARD Score:</b> " + (synth.score ?? "N/A") + "<br><br>" +
-    "<pre>" + JSON.stringify({WISE:wise, SYNTH:synth}, null, 2) + "</pre>";
+    "<b>SYNTH Score:</b> " + (synth.score ?? "N/A") + "<br><br>";
 }
 
-// 📈 chart
+// ✅ upload
+async function upload(){
+  let file = document.getElementById("f").files[0];
+  let form = new FormData();
+  form.append("file", file);
+
+  let r = await fetch(API + "/extract-and-score", {
+    method: "POST",
+    body: form
+  });
+
+  show(await r.json());
+}
+
+// ✅ chart
 function drawChart(attr){
 
   if(chart) chart.destroy();
@@ -172,14 +203,6 @@ function drawChart(attr){
         backgroundColor: 'rgba(52,152,219,0.2)',
         borderColor: '#3498db'
       }]
-    },
-    options: {
-      scales: {
-        r: {
-          min: 0,
-          max: 1
-        }
-      }
     }
   });
 }
