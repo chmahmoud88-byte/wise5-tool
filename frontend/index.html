@@ -1,23 +1,7 @@
 
-<!DOCTYPE html>
-<html>
-<head>
-<title>WISE5 PRO</title>
-</head>
-<body>
-<h1>WISE5 PRO</h1>
-
-<button onclick='wise()'>WISE-5</button>
-<button onclick='bagi()'>BAGI</button>
-
-<input type='file' id='f'>
-<button onclick='upload()'>Upload PDF</button>
-
-<pre id='out'></pre>
-
 <script>
 
-const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjp.spock.replit.dev";
+const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.replit.dev";
 
 async function wise(){
   let r = await fetch(API + '/score',{
@@ -51,6 +35,4 @@ async function upload(){
 }
 
 </script>
-</body>
-</html>
 ``
