@@ -4,6 +4,8 @@
 <head>
 <title>WISE5 PRO</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body {
   font-family: Arial;
@@ -22,6 +24,7 @@ button {
   background: #3498db;
   color: white;
   cursor: pointer;
+  border-radius: 5px;
 }
 
 button:hover {
@@ -38,7 +41,6 @@ button:hover {
 .green { color: green; }
 .orange { color: orange; }
 .red { color: red; }
-
 </style>
 
 </head>
@@ -48,7 +50,7 @@ button:hover {
 <h1>WISE5 PRO</h1>
 
 <button onclick="wise()">WISE-5</button>
-<button onclick="bagi()">BAGI</button>
+<button onclick="synth()">SYNTH-GUARD</button>
 
 <input type="file" id="f">
 <button onclick="upload()">Upload PDF</button>
@@ -59,8 +61,6 @@ button:hover {
 </div>
 
 <canvas id="chart" width="400" height="200"></canvas>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 
@@ -73,12 +73,13 @@ function color(score){
 }
 
 function show(data){
-  let s = data.score;
-  document.getElementById('out').innerHTML =
-    "<b class='"+color(s)+"'>Score: "+s+"</b><br>" +
-    JSON.stringify(data.attributes,null,2);
+  let score = data.score ?? null;
 
-  drawChart(data.attributes);
+  document.getElementById('out').innerHTML =
+    "<b class='"+color(score || 0)+"'>Score: "+(score ?? "N/A")+"</b><br>" +
+    "<pre>"+JSON.stringify(data.attributes || data, null, 2)+"</pre>";
+
+  drawChart(data.attributes || data);
 }
 
 async function wise(){
@@ -90,7 +91,7 @@ async function wise(){
   show(await r.json());
 }
 
-async function bagi(){
+async function synth(){
   let r = await fetch(API + "/bagi", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
@@ -123,6 +124,14 @@ function drawChart(attr){
         backgroundColor: 'rgba(52,152,219,0.2)',
         borderColor: '#3498db'
       }]
+    },
+    options: {
+      scales: {
+        r: {
+          min: 0,
+          max: 1
+        }
+      }
     }
   });
 }
@@ -131,4 +140,3 @@ function drawChart(attr){
 
 </body>
 </html>
-``
