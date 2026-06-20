@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>WISE5 PRO</title>
+<title>WISE5 Analytical Sustainability Platform</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -47,10 +47,12 @@ button:hover {
 
 <body>
 
-<h1>WISE5 PRO</h1>
+<h1>WISE5 Analytical Sustainability Platform</h1>
 
 <button onclick="wise()">WISE-5</button>
 <button onclick="synth()">SYNTH-GUARD</button>
+<button onclick="compare()">COMPARE</button>
+<button onclick="window.print()">Export PDF</button>
 
 <input type="file" id="f">
 <button onclick="upload()">Upload PDF</button>
@@ -66,22 +68,37 @@ button:hover {
 
 const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.replit.dev";
 
+let chart = null;
+
+// 🎨 color logic
 function color(score){
   if(score > 0.75) return "green";
   if(score > 0.5) return "orange";
   return "red";
 }
 
+// 🧠 scientific summary
+function summary(score){
+  if(score > 0.75) return "Excellent green analytical method.";
+  if(score > 0.5) return "Moderately sustainable method.";
+  return "Low sustainability method.";
+}
+
+// 📊 display result
 function show(data){
+
   let score = data.score ?? null;
+  let attrs = data.attributes || data;
 
   document.getElementById('out').innerHTML =
     "<b class='"+color(score || 0)+"'>Score: "+(score ?? "N/A")+"</b><br>" +
-    "<pre>"+JSON.stringify(data.attributes || data, null, 2)+"</pre>";
+    "<i>"+ summary(score || 0) +"</i><br><br>" +
+    "<pre>"+JSON.stringify(attrs, null, 2)+"</pre>";
 
-  drawChart(data.attributes || data);
+  drawChart(attrs);
 }
 
+// ✅ WISE
 async function wise(){
   let r = await fetch(API + "/score", {
     method: "POST",
@@ -91,6 +108,7 @@ async function wise(){
   show(await r.json());
 }
 
+// ✅ SYNTH-GUARD (بديل BAGI)
 async function synth(){
   let r = await fetch(API + "/bagi", {
     method: "POST",
@@ -100,6 +118,7 @@ async function synth(){
   show(await r.json());
 }
 
+// ✅ upload
 async function upload(){
   let file = document.getElementById("f").files[0];
   let form = new FormData();
@@ -113,8 +132,37 @@ async function upload(){
   show(await r.json());
 }
 
+// ✅ compare
+async function compare(){
+
+  let w = await fetch(API + "/score", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({runtime_min:15})
+  });
+
+  let s = await fetch(API + "/bagi", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({})
+  });
+
+  let wise = await w.json();
+  let synth = await s.json();
+
+  document.getElementById('out').innerHTML =
+    "<h3>Comparison</h3>" +
+    "<b>WISE Score:</b> " + wise.score + "<br>" +
+    "<b>SYNTH-GUARD Score:</b> " + (synth.score ?? "N/A") + "<br><br>" +
+    "<pre>" + JSON.stringify({WISE:wise, SYNTH:synth}, null, 2) + "</pre>";
+}
+
+// 📈 chart
 function drawChart(attr){
-  new Chart(document.getElementById("chart"), {
+
+  if(chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("chart"), {
     type: 'radar',
     data: {
       labels: Object.keys(attr),
