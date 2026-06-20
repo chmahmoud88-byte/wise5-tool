@@ -4,7 +4,9 @@
 <head>
 <title>WISE5 Analytical Sustainability Platform</title>
 
+<!-- ✅ Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body {
   font-family: Arial;
@@ -12,7 +14,9 @@ body {
   padding: 20px;
 }
 
-h1 { color: #2c3e50; }
+h1 {
+  color: #2c3e50;
+}
 
 button {
   padding: 10px;
@@ -24,7 +28,9 @@ button {
   border-radius: 5px;
 }
 
-button:hover { background: #2980b9; }
+button:hover {
+  background: #2980b9;
+}
 
 .box {
   background: white;
@@ -37,6 +43,7 @@ button:hover { background: #2980b9; }
 .orange { color: orange; }
 .red { color: red; }
 </style>
+
 </head>
 
 <body>
@@ -49,6 +56,7 @@ button:hover { background: #2980b9; }
 <button onclick="window.print()">Export PDF</button>
 
 <br><br>
+
 <label>Solvent:</label>
 <input type="text" id="solvent" placeholder="e.g. methanol">
 
@@ -64,6 +72,7 @@ button:hover { background: #2980b9; }
 
 <script>
 
+// ✅ API
 const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.replit.dev";
 
 let chart = null;
@@ -82,7 +91,7 @@ const solventsDB = {
   "chloroform": "hazard"
 };
 
-// ✅ solvent scoring
+// ✅ solvent score
 function solventImpact(name){
   let s = solventsDB[name?.toLowerCase()];
   if(s === "green") return 1;
@@ -91,38 +100,61 @@ function solventImpact(name){
   return 0.7;
 }
 
-// 🎨 اللون
+// ✅ color
 function color(score){
   if(score > 0.75) return "green";
   if(score > 0.5) return "orange";
   return "red";
 }
 
-// 🧠 summary
+// ✅ summary
 function summary(score){
   if(score > 0.75) return "Excellent green analytical method.";
   if(score > 0.5) return "Moderately sustainable method.";
   return "Low sustainability method.";
 }
 
-// ✅ عرض
+// ✅ draw chart
+function drawChart(attr){
+  if(chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("chart"), {
+    type: 'radar',
+    data: {
+      labels: Object.keys(attr),
+      datasets: [{
+        label: 'Metrics',
+        data: Object.values(attr),
+        backgroundColor: 'rgba(52,152,219,0.2)',
+        borderColor: '#3498db'
+      }]
+    },
+    options: {
+      scales: {
+        r: { min: 0, max: 1 }
+      }
+    }
+  });
+}
+
+// ✅ show results
 function show(data){
 
-  let baseScore = data.score ?? 0.6;
+  let baseScore = data.score ?? Object.values(data).reduce((a,b)=>a+b,0)/Object.values(data).length;
+
   let attrs = data.attributes || data;
 
   let solvent = document.getElementById("solvent").value;
   let solventScore = solventImpact(solvent);
 
-  // ✅ تعديل السكور بناءً على solvent
   let finalScore = (baseScore + solventScore) / 2;
 
   document.getElementById('out').innerHTML =
     "<b class='"+color(finalScore)+"'>Final Score: "+finalScore.toFixed(2)+"</b><br>" +
-    "<i>"+ summary(finalScore) +"</i><br><br>" +
+    "<i>"+summary(finalScore)+"</i><br><br>" +
 
-    "<b>Solvent:</b> " + solvent + "<br>" +
-    "<b>Class:</b> " + (solventsDB[solvent?.toLowerCase()] || "unknown") + "<br><br>" +
+    "<b>Solvent:</b> "+(solvent || "Not specified")+"<br>" +
+    "<b>Class:</b> "+(solventsDB[solvent?.toLowerCase()] || "unknown")+"<br><br>" +
 
     "<pre>"+JSON.stringify(attrs, null, 2)+"</pre>";
 
@@ -139,7 +171,7 @@ async function wise(){
   show(await r.json());
 }
 
-// ✅ SYNTH-GUARD
+// ✅ SYNTH
 async function synth(){
   let r = await fetch(API + "/bagi", {
     method: "POST",
@@ -149,7 +181,7 @@ async function synth(){
   show(await r.json());
 }
 
-// ✅ compare
+// ✅ COMPARE
 async function compare(){
 
   let w = await fetch(API + "/score", {
@@ -167,10 +199,12 @@ async function compare(){
   let wise = await w.json();
   let synth = await s.json();
 
+  let wiseScore = Object.values(wise).reduce((a,b)=>a+b,0)/Object.values(wise).length;
+
   document.getElementById('out').innerHTML =
     "<h3>Comparison</h3>" +
-    "<b>WISE Score:</b> " + wise.score + "<br>" +
-    "<b>SYNTH Score:</b> " + (synth.score ?? "N/A") + "<br><br>";
+    "<b>WISE Score:</b> "+wiseScore.toFixed(2)+"<br>" +
+    "<b>SYNTH Score:</b> "+(synth.score ?? "N/A")+"<br>";
 }
 
 // ✅ upload
@@ -185,25 +219,6 @@ async function upload(){
   });
 
   show(await r.json());
-}
-
-// ✅ chart
-function drawChart(attr){
-
-  if(chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("chart"), {
-    type: 'radar',
-    data: {
-      labels: Object.keys(attr),
-      datasets: [{
-        label: 'Metrics',
-        data: Object.values(attr),
-        backgroundColor: 'rgba(52,152,219,0.2)',
-        borderColor: '#3498db'
-      }]
-    }
-  });
 }
 
 </script>
