@@ -1,0 +1,38 @@
+
+<script>
+
+const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.replit.dev";
+
+async function wise(){
+  let r = await fetch(API + '/score',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({runtime_min:15})
+  });
+  document.getElementById('out').innerText = await r.text();
+}
+
+async function bagi(){
+  let r = await fetch(API + '/bagi',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({})
+  });
+  document.getElementById('out').innerText = await r.text();
+}
+
+async function upload(){
+  let f = document.getElementById('f').files[0];
+  let form = new FormData();
+  form.append('file', f);
+
+  let r = await fetch(API + '/extract-and-score',{
+    method:'POST',
+    body: form
+  });
+
+  document.getElementById('out').innerText = await r.text();
+}
+
+</script>
+``
