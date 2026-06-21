@@ -4,7 +4,7 @@
 <head>
 <title>WISE5 Analytical Sustainability Platform</title>
 
-<!-- ✅ Chart.js -->
+<!-- ✅ Chart.js الصحيح -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -14,9 +14,7 @@ body {
   padding: 20px;
 }
 
-h1 {
-  color: #2c3e50;
-}
+h1 { color: #2c3e50; }
 
 button {
   padding: 10px;
@@ -28,9 +26,7 @@ button {
   border-radius: 5px;
 }
 
-button:hover {
-  background: #2980b9;
-}
+button:hover { background: #2980b9; }
 
 .box {
   background: white;
@@ -43,7 +39,6 @@ button:hover {
 .orange { color: orange; }
 .red { color: red; }
 </style>
-
 </head>
 
 <body>
@@ -72,7 +67,6 @@ button:hover {
 
 <script>
 
-// ✅ API
 const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.replit.dev";
 
 let chart = null;
@@ -81,14 +75,10 @@ let chart = null;
 const solventsDB = {
   "water": "green",
   "ethanol": "green",
-  "isopropanol": "green",
-
   "methanol": "warning",
   "acetonitrile": "warning",
-
   "hexane": "hazard",
-  "toluene": "hazard",
-  "chloroform": "hazard"
+  "toluene": "hazard"
 };
 
 // ✅ solvent score
@@ -109,13 +99,21 @@ function color(score){
 
 // ✅ summary
 function summary(score){
-  if(score > 0.75) return "Excellent green analytical method.";
-  if(score > 0.5) return "Moderately sustainable method.";
-  return "Low sustainability method.";
+  if(score > 0.75) return "Excellent green method";
+  if(score > 0.5) return "Moderate sustainability";
+  return "Low sustainability";
 }
 
-// ✅ draw chart
+// ✅ safe average (يحميك من NaN 💥)
+function average(obj){
+  let values = Object.values(obj).filter(v => typeof v === "number");
+  if(values.length === 0) return 0.6;
+  return values.reduce((a,b)=>a+b,0) / values.length;
+}
+
+// ✅ رسم الشارت
 function drawChart(attr){
+
   if(chart) chart.destroy();
 
   chart = new Chart(document.getElementById("chart"), {
@@ -137,23 +135,22 @@ function drawChart(attr){
   });
 }
 
-// ✅ show results
+// ✅ عرض الناتج
 function show(data){
 
-  let baseScore = data.score ?? Object.values(data).reduce((a,b)=>a+b,0)/Object.values(data).length;
-
   let attrs = data.attributes || data;
+  let baseScore = data.score ?? average(attrs);
 
   let solvent = document.getElementById("solvent").value;
   let solventScore = solventImpact(solvent);
 
-  let finalScore = (baseScore + solventScore) / 2;
+  let final = (baseScore + solventScore) / 2;
 
-  document.getElementById('out').innerHTML =
-    "<b class='"+color(finalScore)+"'>Final Score: "+finalScore.toFixed(2)+"</b><br>" +
-    "<i>"+summary(finalScore)+"</i><br><br>" +
+  document.getElementById("out").innerHTML =
+    "<b class='"+color(final)+"'>Final Score: "+final.toFixed(2)+"</b><br>" +
+    "<i>"+summary(final)+"</i><br><br>" +
 
-    "<b>Solvent:</b> "+(solvent || "Not specified")+"<br>" +
+    "<b>Solvent:</b> "+(solvent || "None")+"<br>" +
     "<b>Class:</b> "+(solventsDB[solvent?.toLowerCase()] || "unknown")+"<br><br>" +
 
     "<pre>"+JSON.stringify(attrs, null, 2)+"</pre>";
@@ -181,7 +178,7 @@ async function synth(){
   show(await r.json());
 }
 
-// ✅ COMPARE
+// ✅ COMPARE (مفيش NaN نهائي 🔥)
 async function compare(){
 
   let w = await fetch(API + "/score", {
@@ -199,7 +196,8 @@ async function compare(){
   let wise = await w.json();
   let synth = await s.json();
 
-  let wiseScore = Object.values(wise).reduce((a,b)=>a+b,0)/Object.values(wise).length;
+  let wiseAttrs = wise.attributes || wise;
+  let wiseScore = average(wiseAttrs);
 
   document.getElementById('out').innerHTML =
     "<h3>Comparison</h3>" +
@@ -207,7 +205,7 @@ async function compare(){
     "<b>SYNTH Score:</b> "+(synth.score ?? "N/A")+"<br>";
 }
 
-// ✅ upload
+// ✅ Upload
 async function upload(){
   let file = document.getElementById("f").files[0];
   let form = new FormData();
