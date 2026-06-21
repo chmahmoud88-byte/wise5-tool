@@ -5,7 +5,8 @@
 <title>WISE5 Analytical Sustainability Platform</title>
 
 <!-- ✅ Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chartrc="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <!-- ✅ PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
@@ -51,7 +52,6 @@ button:hover { background: #2980b9; }
 <button onclick="synth()">SYNTH-GUARD</button>
 <button onclick="compare()">COMPARE</button>
 <button onclick="exportPDF()">Export PDF</button>
-<button onclick="exportComparePDF()">Comparison Report</button>
 
 <br><br>
 
@@ -74,28 +74,24 @@ const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.
 
 let chart = null;
 
-// ✅ CHEM21 Database
+// ✅ Database
 const solventsDB = {
   "water": {class:"recommended", score:1},
   "ethanol": {class:"recommended", score:1},
-  "acetone": {class:"recommended", score:0.9},
-
   "methanol": {class:"problematic", score:0.6},
   "acetonitrile": {class:"problematic", score:0.6},
-
   "hexane": {class:"hazardous", score:0.2},
-  "toluene": {class:"hazardous", score:0.2},
-  "chloroform": {class:"hazardous", score:0.1}
+  "toluene": {class:"hazardous", score:0.2}
 };
 
-// ✅ safe average (no NaN)
+// ✅ average بدون NaN
 function average(obj){
   let v = Object.values(obj).filter(x => typeof x === "number");
   if(v.length === 0) return 0.6;
   return v.reduce((a,b)=>a+b,0) / v.length;
 }
 
-// ✅ solvent
+// ✅ solvent score
 function solventImpact(name){
   let s = solventsDB[name?.toLowerCase()];
   return s ? s.score : 0.7;
@@ -108,26 +104,14 @@ function color(score){
   return "red";
 }
 
-// ✅ AI discussion (ذكي)
-function aiDiscussion(score, attrs){
-
-  let keys = Object.keys(attrs);
-  let values = Object.values(attrs);
-
-  let max = keys[values.indexOf(Math.max(...values))];
-  let min = keys[values.indexOf(Math.min(...values))];
-
-  return `
-This method shows ${score > 0.75 ? "high" : score > 0.5 ? "moderate" : "low"} sustainability.
-
-Best performance in: ${max}
-Weakest in: ${min}
-
-Overall evaluation is based on WISE5 and green chemistry principles.
-`;
+// ✅ AI explanation
+function aiDiscussion(score){
+  if(score > 0.75) return "High sustainability performance.";
+  if(score > 0.5) return "Moderate sustainability performance.";
+  return "Low sustainability performance.";
 }
 
-// ✅ draw chart
+// ✅ chart
 function drawChart(attr){
 
   if(chart) chart.destroy();
@@ -146,25 +130,21 @@ function drawChart(attr){
   });
 }
 
-// ✅ show results
+// ✅ show
 function show(data){
 
   let attrs = data.attributes || data;
-  let base = data.score ?? average(attrs);
+  let baseScore = data.score ?? average(attrs);
 
   let solvent = document.getElementById("solvent").value;
   let solScore = solventImpact(solvent);
 
-  let final = (base + solScore)/2;
+  let final = (baseScore + solScore)/2;
 
   document.getElementById("out").innerHTML =
     "<b class='"+color(final)+"'>Final Score: "+final.toFixed(2)+"</b><br>" +
-
+    "<i>"+aiDiscussion(final)+"</i><br><br>" +
     "<b>Solvent:</b> "+(solvent || "None")+"<br>" +
-    "<b>Class:</b> "+(solventsDB[solvent?.toLowerCase()]?.class || "unknown")+"<br><br>" +
-
-    "<b>AI Discussion:</b><br>" + aiDiscussion(final, attrs) + "<br><br>" +
-
     "<pre>"+JSON.stringify(attrs, null, 2)+"</pre>";
 
   drawChart(attrs);
@@ -190,52 +170,27 @@ async function synth(){
   show(await r.json());
 }
 
-// ✅ compare
+// ✅ COMPARE
 async function compare(){
 
-  let w = await fetch(API + "/score", {method:"POST"});
-  let s = await fetch(API + "/bagi", {method:"POST"});
+  let w = await fetch(API + "/score",{method:"POST"});
+  let s = await fetch(API + "/bagi",{method:"POST"});
 
   let wise = await w.json();
   let synth = await s.json();
 
-  let wA = wise.attributes || wise;
-  let sA = synth.attributes || synth;
-
-  let wScore = average(wA);
+  let wScore = average(wise.attributes || wise);
 
   document.getElementById("out").innerHTML =
     "<h3>Comparison</h3>" +
     "<b>WISE:</b> "+wScore.toFixed(2)+"<br>" +
     "<b>SYNTH:</b> "+(synth.score ?? "N/A")+"<br>";
-
-  if(chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("chart"), {
-    type:'radar',
-    data:{
-      labels:Object.keys(wA),
-      datasets:[
-        {label:"WISE", data:Object.values(wA), borderColor:"green"},
-        {label:"SYNTH", data:Object.values(sA), borderColor:"red"}
-      ]
-    }
-  });
 }
 
-// ✅ upload + auto detect
-function detectSolvent(text){
-  let t = text.toLowerCase();
-  for(let s in solventsDB){
-    if(t.includes(s)) return s;
-  }
-  return "";
-}
-
+// ✅ Upload
 async function upload(){
 
   let file = document.getElementById("f").files[0];
-
   let form = new FormData();
   form.append("file", file);
 
@@ -244,14 +199,7 @@ async function upload(){
     body: form
   });
 
-  let data = await r.json();
-
-  let detected = detectSolvent(JSON.stringify(data));
-  if(detected){
-    document.getElementById("solvent").value = detected;
-  }
-
-  show(data);
+  show(await r.json());
 }
 
 // ✅ PDF
@@ -263,32 +211,10 @@ function exportPDF(){
   let html = `
     <h1 style="text-align:center">WISE5 Report</h1>
     ${content}
-    <img src="${img}"ML = html;
-
-  html2pdf().from(el).save("Report.pdf");
-}
-
-// ✅ comparison PDF
-async function exportComparePDF(){
-
-  let w = await fetch(API + "/score", {method:"POST"});
-  let s = await fetch(API + "/bagi", {method:"POST"});
-
-  let wise = await w.json();
-  let synth = await s.json();
-
-  let wScore = average(wise.attributes || wise);
-
-  let html = `
-    <h1 style="text-align:center">Comparison Report</h1>
-    <p>WISE: ${wScore.toFixed(2)}</p>
-    <p>SYNTH: ${synth.score ?? "N/A"}</p>
-  `;
-
-  let el = document.createElement("div");
+    <img src="${imgv");
   el.innerHTML = html;
 
-  html2pdf().from(el).save("Comparison.pdf");
+  html2pdf().from(el).save("Report.pdf");
 }
 
 </script>
