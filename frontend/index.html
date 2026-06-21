@@ -4,7 +4,7 @@
 <head>
 <title>WISE5 Analytical Sustainability Platform</title>
 
-<!-- ✅ Chart.js الصحيح -->
+<!-- ✅ Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <!-- ✅ PDF -->
@@ -52,6 +52,7 @@ button:hover { background: #2980b9; }
 <button onclick="synth()">SYNTH-GUARD</button>
 <button onclick="compare()">COMPARE</button>
 <button onclick="exportPDF()">Export PDF</button>
+<button onclick="exportComparePDF()">Comparison Report</button>
 
 <br><br>
 
@@ -74,54 +75,60 @@ const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.
 
 let chart = null;
 
-// ✅ CHEM21 DATABASE (موسّع)
+// ✅ CHEM21 Database
 const solventsDB = {
-  "water": "green",
-  "ethanol": "green",
-  "isopropanol": "green",
-  "acetone": "green",
+  "water": {class:"recommended", score:1},
+  "ethanol": {class:"recommended", score:1},
+  "acetone": {class:"recommended", score:0.9},
 
-  "methanol": "warning",
-  "acetonitrile": "warning",
-  "ethyl acetate": "warning",
+  "methanol": {class:"problematic", score:0.6},
+  "acetonitrile": {class:"problematic", score:0.6},
 
-  "hexane": "hazard",
-  "toluene": "hazard",
-  "chloroform": "hazard",
-  "benzene": "hazard"
+  "hexane": {class:"hazardous", score:0.2},
+  "toluene": {class:"hazardous", score:0.2},
+  "chloroform": {class:"hazardous", score:0.1}
 };
 
-// ✅ متوسط آمن (مفيش NaN)
+// ✅ safe average (no NaN)
 function average(obj){
-  let values = Object.values(obj).filter(v => typeof v === "number");
-  if(values.length === 0) return 0.6;
-  return values.reduce((a,b)=>a+b,0) / values.length;
+  let v = Object.values(obj).filter(x => typeof x === "number");
+  if(v.length === 0) return 0.6;
+  return v.reduce((a,b)=>a+b,0) / v.length;
 }
 
-// ✅ solvent score
+// ✅ solvent
 function solventImpact(name){
   let s = solventsDB[name?.toLowerCase()];
-  if(s === "green") return 1;
-  if(s === "warning") return 0.6;
-  if(s === "hazard") return 0.2;
-  return 0.7;
+  return s ? s.score : 0.7;
 }
 
-// ✅ لون
+// ✅ color
 function color(score){
   if(score > 0.75) return "green";
   if(score > 0.5) return "orange";
   return "red";
 }
 
-// ✅ Summary
-function summary(score){
-  if(score > 0.75) return "Excellent green analytical method.";
-  if(score > 0.5) return "Moderately sustainable method.";
-  return "Low sustainability method.";
+// ✅ AI discussion (ذكي)
+function aiDiscussion(score, attrs){
+
+  let keys = Object.keys(attrs);
+  let values = Object.values(attrs);
+
+  let max = keys[values.indexOf(Math.max(...values))];
+  let min = keys[values.indexOf(Math.min(...values))];
+
+  return `
+This method shows ${score > 0.75 ? "high" : score > 0.5 ? "moderate" : "low"} sustainability.
+
+Best performance in: ${max}
+Weakest in: ${min}
+
+Overall evaluation is based on WISE5 and green chemistry principles.
+`;
 }
 
-// ✅ رسم chart
+// ✅ draw chart
 function drawChart(attr){
 
   if(chart) chart.destroy();
@@ -136,32 +143,28 @@ function drawChart(attr){
         backgroundColor: 'rgba(52,152,219,0.2)',
         borderColor: '#3498db'
       }]
-    },
-    options: {
-      scales: {
-        r: { min: 0, max: 1 }
-      }
     }
   });
 }
 
-// ✅ عرض النتائج
+// ✅ show results
 function show(data){
 
   let attrs = data.attributes || data;
-  let baseScore = data.score ?? average(attrs);
+  let base = data.score ?? average(attrs);
 
   let solvent = document.getElementById("solvent").value;
-  let solventScore = solventImpact(solvent);
+  let solScore = solventImpact(solvent);
 
-  let final = (baseScore + solventScore) / 2;
+  let final = (base + solScore)/2;
 
   document.getElementById("out").innerHTML =
     "<b class='"+color(final)+"'>Final Score: "+final.toFixed(2)+"</b><br>" +
-    "<i>"+summary(final)+"</i><br><br>" +
 
     "<b>Solvent:</b> "+(solvent || "None")+"<br>" +
-    "<b>Class:</b> "+(solventsDB[solvent?.toLowerCase()] || "unknown")+"<br><br>" +
+    "<b>Class:</b> "+(solventsDB[solvent?.toLowerCase()]?.class || "unknown")+"<br><br>" +
+
+    "<b>AI Discussion:</b><br>" + aiDiscussion(final, attrs) + "<br><br>" +
 
     "<pre>"+JSON.stringify(attrs, null, 2)+"</pre>";
 
@@ -188,73 +191,52 @@ async function synth(){
   show(await r.json());
 }
 
-// ✅ COMPARE (مفيش NaN نهائي 🔥)
+// ✅ compare
 async function compare(){
 
-  let w = await fetch(API + "/score", {
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({runtime_min:15})
-  });
-
-  let s = await fetch(API + "/bagi", {
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({})
-  });
+  let w = await fetch(API + "/score", {method:"POST"});
+  let s = await fetch(API + "/bagi", {method:"POST"});
 
   let wise = await w.json();
   let synth = await s.json();
 
-  let wiseAttrs = wise.attributes || wise;
-  let synthAttrs = synth.attributes || synth;
+  let wA = wise.attributes || wise;
+  let sA = synth.attributes || synth;
 
-  let wiseScore = average(wiseAttrs);
+  let wScore = average(wA);
 
   document.getElementById("out").innerHTML =
     "<h3>Comparison</h3>" +
-    "<b>WISE Score:</b> "+wiseScore.toFixed(2)+"<br>" +
-    "<b>SYNTH Score:</b> "+(synth.score ?? "N/A")+"<br>";
-
-  drawComparison(wiseAttrs, synthAttrs);
-}
-
-// ✅ رسم مقارنة مزدوج
-function drawComparison(w, s){
+    "<b>WISE:</b> "+wScore.toFixed(2)+"<br>" +
+    "<b>SYNTH:</b> "+(synth.score ?? "N/A")+"<br>";
 
   if(chart) chart.destroy();
 
   chart = new Chart(document.getElementById("chart"), {
-    type: 'radar',
-    data: {
-      labels: Object.keys(w),
-      datasets: [
-        {
-          label: 'WISE',
-          data: Object.values(w),
-          borderColor: 'green',
-          backgroundColor: 'rgba(0,255,0,0.2)'
-        },
-        {
-          label: 'SYNTH-GUARD',
-          data: Object.values(s),
-          borderColor: 'red',
-          backgroundColor: 'rgba(255,0,0,0.2)'
-        }
+    type:'radar',
+    data:{
+      labels:Object.keys(wA),
+      datasets:[
+        {label:"WISE", data:Object.values(wA), borderColor:"green"},
+        {label:"SYNTH", data:Object.values(sA), borderColor:"red"}
       ]
     }
   });
 }
 
-// ✅ PDF
-function exportPDF(){
-  let element = document.getElementById("out");
-  html2pdf().from(element).save("WISE5_Report.pdf");
+// ✅ upload + auto detect
+function detectSolvent(text){
+  let t = text.toLowerCase();
+  for(let s in solventsDB){
+    if(t.includes(s)) return s;
+  }
+  return "";
 }
 
-// ✅ Upload
 async function upload(){
+
   let file = document.getElementById("f").files[0];
+
   let form = new FormData();
   form.append("file", file);
 
@@ -263,7 +245,51 @@ async function upload(){
     body: form
   });
 
-  show(await r.json());
+  let data = await r.json();
+
+  let detected = detectSolvent(JSON.stringify(data));
+  if(detected){
+    document.getElementById("solvent").value = detected;
+  }
+
+  show(data);
+}
+
+// ✅ PDF
+function exportPDF(){
+
+  let content = document.getElementById("out").innerHTML;
+  let img = document.getElementById("chart").toDataURL();
+
+  let html = `
+    <h1 style="text-align:center">WISE5 Report</h1>
+    ${content}
+    <img src="${img}"ML = html;
+
+  html2pdf().from(el).save("Report.pdf");
+}
+
+// ✅ comparison PDF
+async function exportComparePDF(){
+
+  let w = await fetch(API + "/score", {method:"POST"});
+  let s = await fetch(API + "/bagi", {method:"POST"});
+
+  let wise = await w.json();
+  let synth = await s.json();
+
+  let wScore = average(wise.attributes || wise);
+
+  let html = `
+    <h1 style="text-align:center">Comparison Report</h1>
+    <p>WISE: ${wScore.toFixed(2)}</p>
+    <p>SYNTH: ${synth.score ?? "N/A"}</p>
+  `;
+
+  let el = document.createElement("div");
+  el.innerHTML = html;
+
+  html2pdf().from(el).save("Comparison.pdf");
 }
 
 </script>
