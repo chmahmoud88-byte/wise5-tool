@@ -7,6 +7,9 @@
 <!-- ✅ Chart.js الصحيح -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- ✅ PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <style>
 body {
   font-family: Arial;
@@ -48,7 +51,7 @@ button:hover { background: #2980b9; }
 <button onclick="wise()">WISE-5</button>
 <button onclick="synth()">SYNTH-GUARD</button>
 <button onclick="compare()">COMPARE</button>
-<button onclick="window.print()">Export PDF</button>
+<button onclick="exportPDF()">Export PDF</button>
 
 <br><br>
 
@@ -71,15 +74,29 @@ const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.
 
 let chart = null;
 
-// ✅ CHEM21 DATABASE
+// ✅ CHEM21 DATABASE (موسّع)
 const solventsDB = {
   "water": "green",
   "ethanol": "green",
+  "isopropanol": "green",
+  "acetone": "green",
+
   "methanol": "warning",
   "acetonitrile": "warning",
+  "ethyl acetate": "warning",
+
   "hexane": "hazard",
-  "toluene": "hazard"
+  "toluene": "hazard",
+  "chloroform": "hazard",
+  "benzene": "hazard"
 };
+
+// ✅ متوسط آمن (مفيش NaN)
+function average(obj){
+  let values = Object.values(obj).filter(v => typeof v === "number");
+  if(values.length === 0) return 0.6;
+  return values.reduce((a,b)=>a+b,0) / values.length;
+}
 
 // ✅ solvent score
 function solventImpact(name){
@@ -90,28 +107,21 @@ function solventImpact(name){
   return 0.7;
 }
 
-// ✅ color
+// ✅ لون
 function color(score){
   if(score > 0.75) return "green";
   if(score > 0.5) return "orange";
   return "red";
 }
 
-// ✅ summary
+// ✅ Summary
 function summary(score){
-  if(score > 0.75) return "Excellent green method";
-  if(score > 0.5) return "Moderate sustainability";
-  return "Low sustainability";
+  if(score > 0.75) return "Excellent green analytical method.";
+  if(score > 0.5) return "Moderately sustainable method.";
+  return "Low sustainability method.";
 }
 
-// ✅ safe average (يحميك من NaN 💥)
-function average(obj){
-  let values = Object.values(obj).filter(v => typeof v === "number");
-  if(values.length === 0) return 0.6;
-  return values.reduce((a,b)=>a+b,0) / values.length;
-}
-
-// ✅ رسم الشارت
+// ✅ رسم chart
 function drawChart(attr){
 
   if(chart) chart.destroy();
@@ -135,7 +145,7 @@ function drawChart(attr){
   });
 }
 
-// ✅ عرض الناتج
+// ✅ عرض النتائج
 function show(data){
 
   let attrs = data.attributes || data;
@@ -161,8 +171,8 @@ function show(data){
 // ✅ WISE
 async function wise(){
   let r = await fetch(API + "/score", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
     body: JSON.stringify({runtime_min:15})
   });
   show(await r.json());
@@ -171,8 +181,8 @@ async function wise(){
 // ✅ SYNTH
 async function synth(){
   let r = await fetch(API + "/bagi", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
     body: JSON.stringify({})
   });
   show(await r.json());
@@ -182,14 +192,14 @@ async function synth(){
 async function compare(){
 
   let w = await fetch(API + "/score", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
     body: JSON.stringify({runtime_min:15})
   });
 
   let s = await fetch(API + "/bagi", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
     body: JSON.stringify({})
   });
 
@@ -197,12 +207,49 @@ async function compare(){
   let synth = await s.json();
 
   let wiseAttrs = wise.attributes || wise;
+  let synthAttrs = synth.attributes || synth;
+
   let wiseScore = average(wiseAttrs);
 
-  document.getElementById('out').innerHTML =
+  document.getElementById("out").innerHTML =
     "<h3>Comparison</h3>" +
     "<b>WISE Score:</b> "+wiseScore.toFixed(2)+"<br>" +
     "<b>SYNTH Score:</b> "+(synth.score ?? "N/A")+"<br>";
+
+  drawComparison(wiseAttrs, synthAttrs);
+}
+
+// ✅ رسم مقارنة مزدوج
+function drawComparison(w, s){
+
+  if(chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("chart"), {
+    type: 'radar',
+    data: {
+      labels: Object.keys(w),
+      datasets: [
+        {
+          label: 'WISE',
+          data: Object.values(w),
+          borderColor: 'green',
+          backgroundColor: 'rgba(0,255,0,0.2)'
+        },
+        {
+          label: 'SYNTH-GUARD',
+          data: Object.values(s),
+          borderColor: 'red',
+          backgroundColor: 'rgba(255,0,0,0.2)'
+        }
+      ]
+    }
+  });
+}
+
+// ✅ PDF
+function exportPDF(){
+  let element = document.getElementById("out");
+  html2pdf().from(element).save("WISE5_Report.pdf");
 }
 
 // ✅ Upload
@@ -212,7 +259,7 @@ async function upload(){
   form.append("file", file);
 
   let r = await fetch(API + "/extract-and-score", {
-    method: "POST",
+    method:"POST",
     body: form
   });
 
