@@ -2,31 +2,65 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>WISE5</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<title>WISE5 Platform</title>
 
 <style>
 body {
   font-family: Arial;
-  padding:20px;
+  padding: 20px;
+}
+
+button {
+  padding: 10px;
+  margin: 5px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 </style>
+
 </head>
 
 <body>
 
-<h1>WISE5</h1>
+<h1>WISE5 Platform</h1>
 
-<button onclick="test()">Test</button>
+<button onclick="wise()">WISE-5</button>
+<button onclick="synth()">SYNTH</button>
 
-<div id="out"></div>
+<h3>Results:</h3>
+<pre id="out"></pre>
 
 <script>
-function test(){
-  document.getElementById("out").innerText = "✅ Working!";
+
+const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.replit.dev";
+
+// ✅ WISE
+async function wise(){
+  let r = await fetch(API + "/score", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({runtime_min:15})
+  });
+
+  let data = await r.json();
+  document.getElementById("out").innerText =
+    JSON.stringify(data, null, 2);
 }
+
+// ✅ SYNTH
+async function synth(){
+  let r = await fetch(API + "/bagi", {
+    method: "POST"
+  });
+
+  let data = await r.json();
+  document.getElementById("out").innerText =
+    JSON.stringify(data, null, 2);
+}
+
 </script>
 
 </body>
