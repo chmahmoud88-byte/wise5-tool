@@ -2,144 +2,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>WISE5 Analytical Sustainability Platform</title>
+<title>WISE5</title>
 
-<!-- ✅ Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-<!-- ✅ PDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.jsdy { font-family: Arial; background:#f5f5f5; padding:20px; }
-h1 { color:#2c3e50; }
-
-button {
-  padding:10px; margin:5px;
-  border:none; border-radius:5px;
-  background:#3498db; color:white;
-  cursor:pointer;
+<style>
+body {
+  font-family: Arial;
+  padding:20px;
 }
-button:hover { background:#2980b9; }
-
-.box {
-  background:white;
-  padding:15px;
-  margin-top:20px;
-  border-radius:10px;
-}
-.green{color:green}
-.orange{color:orange}
-.red{color:red}
 </style>
 </head>
 
 <body>
 
-<h1>WISE5 Analytical Sustainability Platform</h1>
+<h1>WISE5</h1>
 
-<button onclick="wise()">WISE-5</button>
-<button onclick="synth()">SYNTH-GUARD</button>
-<button onclick="compare()">COMPARE</button>
-<button onclick="exportPDF()">Export PDF</button>
+<button onclick="test()">Test</button>
 
-<br><br>
-
-<label>Solvent:</label>
-<input type="text" id="solvent" placeholder="methanol">
-
-<input type="file" id="f">
-<button onclick="upload()">Upload PDF</button>
-
-<div class="box">
-<h3>Results:</h3>
 <div id="out"></div>
-</div>
-
-<canvas id="chart"></canvas>
 
 <script>
-
-const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.replit.dev";
-
-let chart;
-
-// ✅ safe average
-function average(obj){
-  let v = Object.values(obj).filter(x => typeof x==="number");
-  if(v.length===0) return 0.6;
-  return v.reduce((a,b)=>a+b)/v.length;
+function test(){
+  document.getElementById("out").innerText = "✅ Working!";
 }
-
-// ✅ show
-function show(data){
-
-  let attrs = data.attributes || data;
-  let score = data.score ?? average(attrs);
-
-  document.getElementById("out").innerHTML =
-    "<b class='green'>Score: "+score.toFixed(2)+"</b><br><br>" +
-    "<pre>"+JSON.stringify(attrs,null,2)+"</pre>";
-
-  draw(attrs);
-}
-
-// ✅ chart
-function draw(attr){
-  if(chart) chart.destroy();
-  chart = new Chart(document.getElementById("chart"),{
-    type:'radar',
-    data:{
-      labels:Object.keys(attr),
-      datasets:[{
-        label:"Metrics",
-        data:Object.values(attr)
-      }]
-    }
-  });
-}
-
-// ✅ WISE
-async function wise(){
-  let r = await fetch(API+"/score",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({runtime_min:15})});
-  show(await r.json());
-}
-
-// ✅ SYNTH
-async function synth(){
-  let r = await fetch(API+"/bagi",{method:"POST"});
-  show(await r.json());
-}
-
-// ✅ compare
-async function compare(){
-
-  let w = await fetch(API+"/score",{method:"POST"});
-  let s = await fetch(API+"/bagi",{method:"POST"});
-
-  let wise = await w.json();
-  let synth = await s.json();
-
-  let score = average(wise.attributes||wise);
-
-  document.getElementById("out").innerHTML =
-    "<h3>Comparison</h3>" +
-    "WISE: "+score.toFixed(2)+"<br>" +
-    "SYNTH: "+(synth.score||"N/A");
-}
-
-// ✅ upload
-async function upload(){
-  let file = document.getElementById("f").files[0];
-  let form = new FormData();
-  form.append("file",file);
-
-  let r = await fetch(API+"/extract-and-score",{method:"POST",body:form});
-  show(await r.json());
-}
-
-// ✅ PDF
-function exportPDF(){
-  html2pdf().from(document.getElementById("out")).save();
-}
-
 </script>
 
 </body>
