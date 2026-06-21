@@ -8,39 +8,26 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <!-- ✅ PDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-<style>
-body {
-  font-family: Arial;
-  background: #f5f5f5;
-  padding: 20px;
-}
-
-h1 { color: #2c3e50; }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.jsdy { font-family: Arial; background:#f5f5f5; padding:20px; }
+h1 { color:#2c3e50; }
 
 button {
-  padding: 10px;
-  margin: 5px;
-  border: none;
-  background: #3498db;
-  color: white;
-  cursor: pointer;
-  border-radius: 5px;
+  padding:10px; margin:5px;
+  border:none; border-radius:5px;
+  background:#3498db; color:white;
+  cursor:pointer;
 }
-
-button:hover { background: #2980b9; }
+button:hover { background:#2980b9; }
 
 .box {
-  background: white;
-  padding: 15px;
-  margin-top: 20px;
-  border-radius: 10px;
+  background:white;
+  padding:15px;
+  margin-top:20px;
+  border-radius:10px;
 }
-
-.green { color: green; }
-.orange { color: orange; }
-.red { color: red; }
+.green{color:green}
+.orange{color:orange}
+.red{color:red}
 </style>
 </head>
 
@@ -56,7 +43,7 @@ button:hover { background: #2980b9; }
 <br><br>
 
 <label>Solvent:</label>
-<input type="text" id="solvent" placeholder="e.g. methanol">
+<input type="text" id="solvent" placeholder="methanol">
 
 <input type="file" id="f">
 <button onclick="upload()">Upload PDF</button>
@@ -66,155 +53,91 @@ button:hover { background: #2980b9; }
 <div id="out"></div>
 </div>
 
-<canvas id="chart" width="400" height="200"></canvas>
+<canvas id="chart"></canvas>
 
 <script>
 
 const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.replit.dev";
 
-let chart = null;
+let chart;
 
-// ✅ Database
-const solventsDB = {
-  "water": {class:"recommended", score:1},
-  "ethanol": {class:"recommended", score:1},
-  "methanol": {class:"problematic", score:0.6},
-  "acetonitrile": {class:"problematic", score:0.6},
-  "hexane": {class:"hazardous", score:0.2},
-  "toluene": {class:"hazardous", score:0.2}
-};
-
-// ✅ average بدون NaN
+// ✅ safe average
 function average(obj){
-  let v = Object.values(obj).filter(x => typeof x === "number");
-  if(v.length === 0) return 0.6;
-  return v.reduce((a,b)=>a+b,0) / v.length;
-}
-
-// ✅ solvent score
-function solventImpact(name){
-  let s = solventsDB[name?.toLowerCase()];
-  return s ? s.score : 0.7;
-}
-
-// ✅ color
-function color(score){
-  if(score > 0.75) return "green";
-  if(score > 0.5) return "orange";
-  return "red";
-}
-
-// ✅ AI explanation
-function aiDiscussion(score){
-  if(score > 0.75) return "High sustainability performance.";
-  if(score > 0.5) return "Moderate sustainability performance.";
-  return "Low sustainability performance.";
-}
-
-// ✅ chart
-function drawChart(attr){
-
-  if(chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("chart"), {
-    type: 'radar',
-    data: {
-      labels: Object.keys(attr),
-      datasets: [{
-        label: 'Metrics',
-        data: Object.values(attr),
-        backgroundColor: 'rgba(52,152,219,0.2)',
-        borderColor: '#3498db'
-      }]
-    }
-  });
+  let v = Object.values(obj).filter(x => typeof x==="number");
+  if(v.length===0) return 0.6;
+  return v.reduce((a,b)=>a+b)/v.length;
 }
 
 // ✅ show
 function show(data){
 
   let attrs = data.attributes || data;
-  let baseScore = data.score ?? average(attrs);
-
-  let solvent = document.getElementById("solvent").value;
-  let solScore = solventImpact(solvent);
-
-  let final = (baseScore + solScore)/2;
+  let score = data.score ?? average(attrs);
 
   document.getElementById("out").innerHTML =
-    "<b class='"+color(final)+"'>Final Score: "+final.toFixed(2)+"</b><br>" +
-    "<i>"+aiDiscussion(final)+"</i><br><br>" +
-    "<b>Solvent:</b> "+(solvent || "None")+"<br>" +
-    "<pre>"+JSON.stringify(attrs, null, 2)+"</pre>";
+    "<b class='green'>Score: "+score.toFixed(2)+"</b><br><br>" +
+    "<pre>"+JSON.stringify(attrs,null,2)+"</pre>";
 
-  drawChart(attrs);
+  draw(attrs);
+}
+
+// ✅ chart
+function draw(attr){
+  if(chart) chart.destroy();
+  chart = new Chart(document.getElementById("chart"),{
+    type:'radar',
+    data:{
+      labels:Object.keys(attr),
+      datasets:[{
+        label:"Metrics",
+        data:Object.values(attr)
+      }]
+    }
+  });
 }
 
 // ✅ WISE
 async function wise(){
-  let r = await fetch(API + "/score", {
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({runtime_min:15})
-  });
+  let r = await fetch(API+"/score",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({runtime_min:15})});
   show(await r.json());
 }
 
 // ✅ SYNTH
 async function synth(){
-  let r = await fetch(API + "/bagi", {
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({})
-  });
+  let r = await fetch(API+"/bagi",{method:"POST"});
   show(await r.json());
 }
 
-// ✅ COMPARE
+// ✅ compare
 async function compare(){
 
-  let w = await fetch(API + "/score",{method:"POST"});
-  let s = await fetch(API + "/bagi",{method:"POST"});
+  let w = await fetch(API+"/score",{method:"POST"});
+  let s = await fetch(API+"/bagi",{method:"POST"});
 
   let wise = await w.json();
   let synth = await s.json();
 
-  let wScore = average(wise.attributes || wise);
+  let score = average(wise.attributes||wise);
 
   document.getElementById("out").innerHTML =
     "<h3>Comparison</h3>" +
-    "<b>WISE:</b> "+wScore.toFixed(2)+"<br>" +
-    "<b>SYNTH:</b> "+(synth.score ?? "N/A")+"<br>";
+    "WISE: "+score.toFixed(2)+"<br>" +
+    "SYNTH: "+(synth.score||"N/A");
 }
 
-// ✅ Upload
+// ✅ upload
 async function upload(){
-
   let file = document.getElementById("f").files[0];
   let form = new FormData();
-  form.append("file", file);
+  form.append("file",file);
 
-  let r = await fetch(API + "/extract-and-score", {
-    method:"POST",
-    body: form
-  });
-
+  let r = await fetch(API+"/extract-and-score",{method:"POST",body:form});
   show(await r.json());
 }
 
 // ✅ PDF
 function exportPDF(){
-
-  let content = document.getElementById("out").innerHTML;
-  let img = document.getElementById("chart").toDataURL();
-
-  let html = `
-    <h1 style="text-align:center">WISE5 Report</h1>
-    ${content}
-    <img src="${imgv");
-  el.innerHTML = html;
-
-  html2pdf().from(el).save("Report.pdf");
+  html2pdf().from(document.getElementById("out")).save();
 }
 
 </script>
