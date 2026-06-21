@@ -31,7 +31,7 @@ button {
 <button onclick="synth()">SYNTH</button>
 
 <h3>Results:</h3>
-<pre id="out"></pre>
+<pre id="out">Click a button...</pre>
 
 <script>
 
@@ -39,26 +39,36 @@ const API = "https://186d0b12-3cac-4938-a024-36a4392aea9f-00-bavs8irypmjt.spock.
 
 // ✅ WISE
 async function wise(){
-  let r = await fetch(API + "/score", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({runtime_min:15})
-  });
+  try {
+    let r = await fetch(API + "/score", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({runtime_min:15})
+    });
 
-  let data = await r.json();
-  document.getElementById("out").innerText =
-    JSON.stringify(data, null, 2);
+    let data = await r.json();
+    document.getElementById("out").innerText =
+      JSON.stringify(data, null, 2);
+
+  } catch(e){
+    document.getElementById("out").innerText = "ERROR: " + e;
+  }
 }
 
 // ✅ SYNTH
 async function synth(){
-  let r = await fetch(API + "/bagi", {
-    method: "POST"
-  });
+  try {
+    let r = await fetch(API + "/bagi", {
+      method: "POST"
+    });
 
-  let data = await r.json();
-  document.getElementById("out").innerText =
-    JSON.stringify(data, null, 2);
+    let data = await r.json();
+    document.getElementById("out").innerText =
+      JSON.stringify(data, null, 2);
+
+  } catch(e){
+    document.getElementById("out").innerText = "ERROR: " + e;
+  }
 }
 
 </script>
